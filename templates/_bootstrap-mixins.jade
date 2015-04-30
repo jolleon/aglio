@@ -68,7 +68,7 @@ mixin Parameters(params)
 
 mixin RequestResponse(title, request, resourceGroup, resource, action)
     - var id = hash(resourceGroup.name.toString() + resource.name.toString() + action.name.toString() + action.method.toString() + title.toString() + request.name.toString() + request.headers.toString() + request.body.toString() + request.schema.toString())
-    - var content = request.description || Object.keys(request.headers).length || request.body || request.schema
+    - var content = request.description || Object.keys(request.headers).length || request.body || request.schema || request.content
     li.list-group-item
         strong
             = title
@@ -99,6 +99,45 @@ mixin RequestResponse(title, request, resourceGroup, resource, action)
                 h5 Schema
                 pre
                     code!= highlight(request.schema)
+            if request.content
+                each rContent in request.content
+                    //
+                        this could replace the existing Body and Schema sections
+                        if rContent.element == "asset"
+                            h5= rContent.attributes.role
+                            pre
+                                code!= highlight(rContent.content)
+
+                    if rContent.element == "dataStructure"
+                        +DataStructureBody(rContent)
+
+
+mixin DataStructureBody(rcontent)
+    h5 Body
+    each section in rcontent.sections
+        if section.class == "memberType"
+            pre
+                code
+                    != highlight('{\n')
+                    each member in section.content
+                        if member.class == "property"
+                            - var property = member.content
+                            - var value = property.valueDefinition.values[0]
+                            - var valueType = property.valueDefinition.typeDefinition.typeSpecification.name
+                            if value
+                                - var exampleValue = (valueType == "string" ? '"' + value.literal + '"' : value.literal)
+                            else
+                                case valueType
+                                    when 'string': - var exampleValue = '""'
+                                    when 'number': - var exampleValue = '0'
+                                    default: - var exampleValue = '?'
+                            if valueType.literal
+                                - valueType = valueType.literal
+                            - var description = ''
+                            if property.description
+                                - var description = ' - ' + property.description
+                            != highlight('    "' + property.name.literal + '": ' + exampleValue + ', // ' + valueType + description + '\n')
+                    != highlight('}')
 
 
 mixin Examples(resourceGroup, resource, action)
